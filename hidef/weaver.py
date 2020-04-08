@@ -38,7 +38,7 @@ class Weaver(object):
     Construct a hierarchy based on P:
 
     >>> weaver = Weaver()
-    >>> weaver.weave(P, terminals=nodes, levels=False, top=10, cutoff=0.9)
+    >>> weaver.weave(P, terminals=nodes, levels=False, boolean=True, top=10, cutoff=0.9)
 
     """
 
