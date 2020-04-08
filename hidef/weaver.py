@@ -692,6 +692,10 @@ class Weaver(object):
                 return True
         return False
 
+    def nodes_topo_sorted(self):
+        for node in traverse_topdown(self.hier, 'depth'):
+            yield node
+
     def _topdown_cluster(self, attr, value, **kwargs):
         """Recovers the partition at specified depth.
 
@@ -1123,6 +1127,7 @@ def show_hierarchy(T, **kwargs):
     edgelabel = kwargs.pop('edge_label', False)
     interactive = kwargs.pop('interactive', True)
     excluded_nodes = kwargs.pop('excluded_nodes', [])
+    pos = kwargs.pop('layout', None)
 
     isWindows = osname == 'nt'
 
@@ -1141,7 +1146,8 @@ def show_hierarchy(T, **kwargs):
     else:
         T2 = T.subgraph(n for n in T.nodes() if n not in excluded_nodes)
     
-    pos = graphviz_layout(T2, prog=style)
+    if pos is None:
+        pos = graphviz_layout(T2, prog=style)
 
     if edgescale:
         widths = []
