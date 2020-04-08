@@ -693,8 +693,19 @@ class Weaver(object):
         return False
 
     def nodes_topo_sorted(self):
-        for node in traverse_topdown(self.hier, 'depth'):
-            yield node
+        nodes = []
+        root = self.root
+        T = self.hier
+
+        def dfs(node):
+            if not node in nodes:
+                for child in T.successors(node):
+                    dfs(child)
+
+                nodes.append(node)
+        
+        dfs(root)
+        return nodes
 
     def _topdown_cluster(self, attr, value, **kwargs):
         """Recovers the partition at specified depth.
