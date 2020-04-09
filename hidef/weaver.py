@@ -1138,30 +1138,37 @@ def stuff_dummies(hierarchy):
     return T
 
 def seq_layout(weaver, scale=30):
-     pos = {}
-     for i, node in enumerate(weaver.terminals):
-          pos[node] = (i, 0)
+    if weaver.hier is None:
+        raise ValueError('hierarchy not built. Call weaver.weave() first')
+    
+    T = weaver.hier
 
-     nodes = [_ for _ in weaver.nodes_topo_sorted()]
+    pos = {}
+    for i, node in enumerate(weaver.terminals):
+        d = T.nodes[node]['depth']
+        pos[node] = (i, d)
 
-     for node in nodes:
-          if node in pos:
-               continue
-          X = []; Y = []
-          for child in weaver.hier.successors(node):
-               X.append(pos[child][0])
-               Y.append(pos[child][1])
+    nodes = [_ for _ in weaver.nodes_topo_sorted()]
 
-          if X:
-               x = np.mean(X)
-               y = np.min(Y) - 1
-               pos[node] = (x, y)
+    for node in nodes:
+        d = T.nodes[node]['depth']
+        if node in pos:
+            continue
+        X = []#; Y = []
+        for child in T.successors(node):
+            X.append(pos[child][0])
+            #Y.append(pos[child][1])
 
-     for node in pos:
-          x, y = pos[node]
-          pos[node] = (x * scale, -y * scale)
+        if X:
+            x = np.mean(X)
+            y = d#np.min(Y) - 1
+            pos[node] = (x, y)
 
-     return pos
+    for node in pos:
+        x, y = pos[node]
+        pos[node] = (x * scale, -y * scale)
+
+    return pos
 
 def show_hierarchy(T, **kwargs):
     """Visualizes the hierarchy"""
