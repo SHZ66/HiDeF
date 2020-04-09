@@ -1180,6 +1180,8 @@ def show_hierarchy(T, **kwargs):
     edgelabel = kwargs.pop('edge_label', False)
     interactive = kwargs.pop('interactive', True)
     excluded_nodes = kwargs.pop('excluded_nodes', [])
+    node_color = kwargs.pop('node_color', '#1f78b4')
+    with_colors = kwargs.pop('with_colors', False)
 
     isWindows = osname == 'nt'
 
@@ -1204,6 +1206,18 @@ def show_hierarchy(T, **kwargs):
     else:
         T2 = T.subgraph(n for n in T.nodes() if n not in excluded_nodes)
     
+    nodelist = kwargs.pop('nodelist', T2.nodes())
+    if with_colors:
+        node_colors = []
+
+        for node in nodelist:
+            if 'color' in T2.nodes[node]:
+                node_colors.append(T2.nodes[node]['color'])
+            else:
+                node_colors.append(node_color)
+    else:
+        node_colors = node_color
+
     if pos is None:
         pos = graphviz_layout(T2, prog=style)
 
@@ -1218,7 +1232,9 @@ def show_hierarchy(T, **kwargs):
     if not 'arrows' in kwargs:
         kwargs['arrows'] = False
         
-    draw(T2, pos, node_size=nodesize, width=widths, **kwargs)
+    draw(T2, pos, node_size=nodesize, width=widths, node_color=node_colors, 
+         nodelist=nodelist, **kwargs)
+         
     if edgelabel:
         labels = get_edge_attributes(T2, 'weight')
         draw_networkx_edge_labels(T2, pos, edge_labels=labels)
