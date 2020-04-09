@@ -11,7 +11,8 @@ __all__ = ['Weaver', 'weave']
 
 istuple = lambda n: isinstance(n, tuple)
 isdummy = lambda n: None in n
-internals = lambda T: (node for node in T if istuple(node))
+isinternal = lambda T, n: T.out_degree(n) > 0
+internals = lambda T: (node for node in T if isinternal(T, node))
 RECURSION_MAX_DEPTH = int(10e6)
 
 class Weaver(object):
@@ -86,6 +87,12 @@ class Weaver(object):
 
     assignment = property(get_assignment, doc='assignment matrix')
 
+    def get_internals(self):
+        for node in internals(self.hier):
+            yield node
+    
+    internals = property(get_internals, doc='internal nodes')
+        
     def relabel(self):
         """Changes the labels of the nodes to the depths."""
 
@@ -97,7 +104,7 @@ class Weaver(object):
             map_dict = self.depth()
             
         for node in map_dict:
-            if istuple(node):
+            if self.is_internal(node):
                 value = map_dict[node]
                 idx = map_indices[value]
                 mapping[node] = (value, idx)
@@ -123,6 +130,9 @@ class Weaver(object):
 
         levels.sort()
         return levels
+
+    def is_internal(self, node):
+        return self.is_internal(node)
 
     def some_node(self, level):
         """Returns the first node that is associated with the partition specified by level."""
@@ -588,7 +598,7 @@ class Weaver(object):
         # pack results
         if node is None:
             ret = values
-        elif istuple(node) or np.isscalar(node):
+        elif node in self.hier.nodes():
             ret = values.pop(node)
         else:
             ret = []
@@ -619,7 +629,7 @@ class Weaver(object):
         if leaf:
             depths = [depth_dict[k] for k in depth_dict]
         else:
-            depths = [depth_dict[k] for k in depth_dict if istuple(k)]
+            depths = [depth_dict[k] for k in depth_dict if self.is_internal(k)]
 
         return np.unique(depths)
 
@@ -669,7 +679,7 @@ class Weaver(object):
             out = np.zeros(n_nodes, dtype=bool)
         
         desc = [_ for _ in nx.descendants(T, node) 
-                if not istuple(_)]
+                if not self.is_internal(_)]
         
         if len(desc):
             for d in desc:
@@ -688,7 +698,7 @@ class Weaver(object):
 
         T = self.hier
         for child in T.successors(node):
-            if not istuple(child):
+            if not self.is_internal(child):
                 return True
         return False
 
@@ -741,7 +751,7 @@ class Weaver(object):
 
             visited[node] = True
 
-            if not istuple(node):
+            if not self.is_internal(node):
                 if not stop_before_terminal:
                     clusters.append(node)
                 continue
@@ -750,7 +760,7 @@ class Weaver(object):
                 if stop_before_terminal and self.has_any_terminal(node):
                          clusters.append(node)
                 for child in T.successors(node):
-                    if stop_before_terminal and not istuple(child):
+                    if stop_before_terminal and not self.is_internal(child):
                         continue
                     Q.append(child)
             elif attrs[node] == value:
@@ -817,7 +827,7 @@ class Weaver(object):
         
         if format == 'ddot':
             for u, v in G.edges():
-                if istuple(u) and istuple(v):
+                if self.is_internal(u) and self.is_internal(v):
                     G[u][v]['type'] = 'Child-Parent'
                 else:
                     G[u][v]['type'] = 'Gene-Term'
@@ -981,13 +991,13 @@ def prune(T, **kwargs):
     strict_single_branch = kwargs.pop('strict_single_branch', False)
     # prune tree
     # remove dead-ends
-    internal_nodes = [node for node in T.nodes() if istuple(node)]
+    internal_nodes = [node for node in T.nodes() if isinternal(T, node)]
     out_degrees = [val for key, val in T.out_degree(internal_nodes)]
 
     while (0 in out_degrees):
         for node in reversed(internal_nodes):
             outdeg = T.out_degree(node)
-            if istuple(node) and outdeg == 0:
+            if isinternal(T, node) and outdeg == 0:
                 T.remove_node(node)
                 internal_nodes.remove(node)
 
@@ -1004,12 +1014,12 @@ def prune(T, **kwargs):
             outdeg = T.out_degree(node)
             if outdeg == 1:
                 child = next(T.successors(node))
-                if not istuple(child):
+                if not isinternal(T, child):
                     outdeg = 0
         else: # is a single branch if there is only one internal outedge
             outdeg = 0
             for child in T.successors(node):
-                if istuple(child):
+                if isinternal(T, child):
                     outdeg += 1
 
         if outdeg > 1:
@@ -1092,7 +1102,7 @@ def stuff_dummies(hierarchy):
         i = find(levels, level)
         parents = [_ for _ in T.predecessors(node)]
         for parent in parents:
-            if not istuple(parent):
+            if not isinternal(T, parent):
                 # unlikely to happen
                 continue
             plevel = T.nodes[parent]['level']
@@ -1146,12 +1156,12 @@ def show_hierarchy(T, **kwargs):
         style += '.exe'
 
     if not leaf:
-        T2 = T.subgraph(n for n in T.nodes() if istuple(n) and n not in excluded_nodes)
+        T2 = T.subgraph(n for n in T.nodes() if isinternal(T, n) and n not in excluded_nodes)
         if 'nodelist' in kwargs:
             nodes = kwargs.pop('nodelist')
             nonleaves = []
             for node in nodes:
-                if istuple(node) and node not in excluded_nodes:
+                if isinternal(T, node) and node not in excluded_nodes:
                     nonleaves.append(node)
             kwargs['nodelist'] = nonleaves
     else:
