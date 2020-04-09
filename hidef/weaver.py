@@ -644,6 +644,8 @@ class Weaver(object):
 
         nodelist = kwargs.pop('nodelist', None)
         dummy = kwargs.pop('dummy', False)
+        style = kwargs.pop('style', 'dot')
+        style = kwargs.pop('layout', style)
 
         if self.hier is None:
             raise ValueError('hierarchy not built. Call weave() first')
@@ -655,8 +657,11 @@ class Weaver(object):
 
         if dummy:
             T = stuff_dummies(T)
+
+        if style == 'seq':
+            style = seq_layout(self)
         
-        return show_hierarchy(T, nodelist=nodelist, **kwargs)
+        return show_hierarchy(T, nodelist=nodelist, style=style, **kwargs)
 
     def node_cluster(self, node, out=None):
         """Recovers the cluster represented by a node in the hierarchy.
@@ -1132,6 +1137,32 @@ def stuff_dummies(hierarchy):
     
     return T
 
+def seq_layout(weaver, scale=30):
+     pos = {}
+     for i, node in enumerate(weaver.terminals):
+          pos[node] = (i, 0)
+
+     nodes = [_ for _ in weaver.nodes_topo_sorted()]
+
+     for node in nodes:
+          if node in pos:
+               continue
+          X = []; Y = []
+          for child in weaver.hier.successors(node):
+               X.append(pos[child][0])
+               Y.append(pos[child][1])
+
+          if X:
+               x = np.mean(X)
+               y = np.min(Y) - 1
+               pos[node] = (x, y)
+
+     for node in pos:
+          x, y = pos[node]
+          pos[node] = (x * scale, -y * scale)
+
+     return pos
+
 def show_hierarchy(T, **kwargs):
     """Visualizes the hierarchy"""
 
@@ -1142,18 +1173,24 @@ def show_hierarchy(T, **kwargs):
     from matplotlib.pyplot import plot, xlim, ylim
 
     style = kwargs.pop('style', 'dot')
+    style = kwargs.pop('layout', style)
     leaf = kwargs.pop('leaf', True)
     nodesize = kwargs.pop('node_size', 16)
     edgescale = kwargs.pop('edge_scale', None)
     edgelabel = kwargs.pop('edge_label', False)
     interactive = kwargs.pop('interactive', True)
     excluded_nodes = kwargs.pop('excluded_nodes', [])
-    pos = kwargs.pop('layout', None)
 
     isWindows = osname == 'nt'
 
-    if isWindows:
-        style += '.exe'
+    pos = None
+    if isinstance(style, str):
+        if isWindows:
+            style += '.exe'
+    elif isinstance(style, dict):
+        pos = style
+    else:
+        raise TypeError('unknown style: ' + str(style))
 
     if not leaf:
         T2 = T.subgraph(n for n in T.nodes() if isinternal(T, n) and n not in excluded_nodes)
