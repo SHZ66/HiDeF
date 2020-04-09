@@ -11,7 +11,7 @@ __all__ = ['Weaver', 'weave']
 
 istuple = lambda n: isinstance(n, tuple)
 isdummy = lambda n: None in n
-isinternal = lambda T, n: T.out_degree(n) > 0
+isinternal = lambda T, n: 'index' in T.nodes[n]
 internals = lambda T: (node for node in T if isinternal(T, node))
 RECURSION_MAX_DEPTH = int(10e6)
 
@@ -132,7 +132,7 @@ class Weaver(object):
         return levels
 
     def is_internal(self, node):
-        return self.is_internal(node)
+        return isinternal(self.hier, node)
 
     def some_node(self, level):
         """Returns the first node that is associated with the partition specified by level."""
