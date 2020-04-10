@@ -733,6 +733,7 @@ class Weaver(object):
 
         flat = kwargs.pop('flat', True) 
         stop_before_terminal = kwargs.pop('stop_before_terminal', True)
+        clusters = kwargs.pop('nodes', [])
 
         if self.hier is None:
             raise ValueError('hierarchy not built. Call weave() first')
@@ -745,7 +746,6 @@ class Weaver(object):
 
         # assign labels
         Q = [root]
-        clusters = []
         visited = defaultdict(bool)
 
         while Q:
@@ -1241,7 +1241,7 @@ def show_hierarchy(T, **kwargs):
         
     draw(T2, pos, node_size=nodesize, width=widths, node_color=node_colors, 
          nodelist=nodelist, **kwargs)
-         
+
     if edgelabel:
         labels = get_edge_attributes(T2, 'weight')
         draw_networkx_edge_labels(T2, pos, edge_labels=labels)
